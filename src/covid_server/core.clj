@@ -1,4 +1,4 @@
-(ns covid-ring-compojure.web
+(ns covid-server.core
   (:require [compojure.route :as route]
             [compojure.handler :as handler])
   (:use compojure.core
@@ -20,12 +20,17 @@
 (def total-confirmed-memo (memoize total-confirmed))
 
 (defroutes site-routes
+  (GET "/ibm-stock-data.csv" [] (redirect "/data/ibm.csv"))
+
+  (GET "/user/:id" [id] (str "hi " id))
   (GET "/" [] (redirect "/data/census-race.json"))
+  (GET "/hi" [] (seq [[0 1 2] '(:duck2 "quack2!!") {:duck "quack!!"}]))
+  (GET "/hi2" [] {:body [0 1 2]})
   (GET "/total-confirmed" [] (str (total-confirmed-memo)))
   (route/resources "/")
   (route/not-found "Page not found"))
 
-(def app
+ (def api
   (-> (handler/site site-routes)
       (wrap-file "resources")
       (wrap-file-info)

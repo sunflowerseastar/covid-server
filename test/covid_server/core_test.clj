@@ -1,6 +1,6 @@
-(ns covid-ring-compojure.core-test
+(ns covid-server.core-test
   (:require [clojure.test :refer :all]
-            [covid-ring-compojure.core :refer :all]))
+            [covid-server.core :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."
