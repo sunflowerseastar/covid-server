@@ -7,7 +7,8 @@
         [ring.middleware.file :only (wrap-file)]
         [ring.middleware.file-info :only (wrap-file-info)]
         [ring.middleware.stacktrace :only (wrap-stacktrace)]
-        [ring.util.response :only (redirect)]))
+        [ring.util.response :only (redirect)]
+        [muuntaja.middleware :as mw]))
 
 
 (defroutes site-routes
@@ -19,4 +20,5 @@
   (-> (handler/site site-routes)
       (wrap-file "resources")
       (wrap-file-info)
+      (mw/wrap-format)
       (wrap-content-type)))
