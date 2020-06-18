@@ -17,20 +17,23 @@
 (defn total-confirmed []
   (reduce + (i/$ :Confirmed covid-data)))
 
+
 (def total-confirmed-memo (memoize total-confirmed))
 
+(defn confirmed-by-region []
+  (->> (i/$rollup :sum :Confirmed :Country_Region covid-data)
+       (i/$order :Confirmed :desc)
+       to-vect))
 (defroutes site-routes
-  (GET "/ibm-stock-data.csv" [] (redirect "/data/ibm.csv"))
-
-  (GET "/user/:id" [id] (str "hi " id))
-  (GET "/" [] (redirect "/data/census-race.json"))
-  (GET "/hi" [] (seq [[0 1 2] '(:duck2 "quack2!!") {:duck "quack!!"}]))
-  (GET "/hi2" [] {:body [0 1 2]})
+  (GET "/" [] "")
   (GET "/total-confirmed" [] (str (total-confirmed-memo)))
+  (GET "/confirmed-by-region" [] (str (confirmed-by-region)))
+  (GET "/all" [] {:body {:total-confirmed (total-confirmed-memo)
+                         :confirmed-by-region (confirmed-by-region)}})
   (route/resources "/")
   (route/not-found "Page not found"))
 
- (def api
+(def api
   (-> (handler/site site-routes)
       (wrap-file "resources")
       (wrap-file-info)
