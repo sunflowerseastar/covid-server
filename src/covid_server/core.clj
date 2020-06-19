@@ -17,6 +17,13 @@
 (defn total-confirmed []
   (reduce + (i/$ :Confirmed covid-data)))
 
+(defn global-deaths []
+  (let [total-deaths (reduce + (i/$ :Deaths covid-data))
+        deaths-by-region (->> (i/$rollup :sum :Deaths :Country_Region covid-data)
+                              (i/$order :Deaths :desc)
+                              to-vect)]
+    {:deaths-by-region deaths-by-region
+     :total-deaths total-deaths}))
 
 (def total-confirmed-memo (memoize total-confirmed))
 
@@ -24,11 +31,14 @@
   (->> (i/$rollup :sum :Confirmed :Country_Region covid-data)
        (i/$order :Confirmed :desc)
        to-vect))
+
 (defroutes site-routes
   (GET "/" [] "")
+  (GET "/global-deaths" [] (str (global-deaths)))
   (GET "/total-confirmed" [] (str (total-confirmed-memo)))
   (GET "/confirmed-by-region" [] (str (confirmed-by-region)))
   (GET "/all" [] {:body {:total-confirmed (total-confirmed-memo)
+                         :global-deaths (global-deaths)
                          :confirmed-by-region (confirmed-by-region)}})
   (route/resources "/")
   (route/not-found "Page not found"))
