@@ -12,14 +12,14 @@
         [incanter.io :refer [read-dataset]]
         [muuntaja.middleware :as mw]))
 
-(def covid-data (read-dataset "06-08-2020.csv" :header true))
+(def csse-daily-reports (read-dataset "06-08-2020.csv" :header true))
 
 (defn total-confirmed []
-  (reduce + (i/$ :Confirmed covid-data)))
+  (reduce + (i/$ :Confirmed csse-daily-reports)))
 
 (defn global-deaths []
-  (let [total-deaths (reduce + (i/$ :Deaths covid-data))
-        deaths-by-region (->> (i/$rollup :sum :Deaths :Country_Region covid-data)
+  (let [total-deaths (reduce + (i/$ :Deaths csse-daily-reports))
+        deaths-by-region (->> (i/$rollup :sum :Deaths :Country_Region csse-daily-reports)
                               (i/$order :Deaths :desc)
                               to-vect)]
     {:deaths-by-region deaths-by-region
@@ -28,13 +28,14 @@
 (def total-confirmed-memo (memoize total-confirmed))
 
 (defn confirmed-by-region []
-  (->> (i/$rollup :sum :Confirmed :Country_Region covid-data)
+  (->> (i/$rollup :sum :Confirmed :Country_Region csse-daily-reports)
        (i/$order :Confirmed :desc)
        to-vect))
 
 (defroutes site-routes
   (GET "/" [] "")
   (GET "/global-deaths" [] (str (global-deaths)))
+  (GET "/us-state-level-deaths-recovered" [] (str (us-state-level-deaths-recovered)))
   (GET "/total-confirmed" [] (str (total-confirmed-memo)))
   (GET "/confirmed-by-region" [] (str (confirmed-by-region)))
   (GET "/all" [] {:body {:total-confirmed (total-confirmed-memo)
