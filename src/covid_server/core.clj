@@ -14,6 +14,7 @@
 
 (def csse-daily-report (read-dataset "06-08-2020.csv" :header true))
 (def csse-daily-report-us (read-dataset "states_06-18-2020.csv" :header true))
+(def csse-time-series-confirmed-global (read-dataset "time_series_covid19_confirmed_global.csv" :header true))
 
 (defn confirmed-by-region [data]
   (->> data (i/$rollup :sum :Confirmed :Country_Region)
@@ -25,6 +26,14 @@
                           (i/$order :Deaths :desc)
                           to-vect)
    :total-deaths (reduce + (i/$ :Deaths data))})
+
+(defn time-series-confirmed-global [data]
+  (let [data-date-columns-only (i/$ [:not :Province/State :Country/Region :Lat :Long] data)
+        dates (i/col-names data-date-columns-only)
+        column-totals (->> data-date-columns-only
+                           to-matrix
+                           (reduce i/plus))]
+    (map vector dates column-totals)))
 
 (defn total-confirmed [data]
   (reduce + (i/$ :Confirmed data)))
@@ -39,10 +48,12 @@
   (GET "/" [] "")
   (GET "/confirmed-by-region" [] (str (confirmed-by-region csse-daily-report)))
   (GET "/global-deaths" [] (str (global-deaths csse-daily-report)))
+  (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global csse-time-series-confirmed-global)})
   (GET "/total-confirmed" [] (str (total-confirmed csse-daily-report)))
   (GET "/us-state-level-deaths-recovered" [] (str (us-state-level-deaths-recovered csse-daily-report-us)))
   (GET "/all" [] {:body {:confirmed-by-region (confirmed-by-region csse-daily-report)
                          :global-deaths (global-deaths csse-daily-report)
+                         :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
                          :total-confirmed (total-confirmed csse-daily-report)
                          :us-state-level-deaths-recovered (us-state-level-deaths-recovered csse-daily-report-us)}})
   (route/not-found "Page not found"))

@@ -8,6 +8,7 @@
                  [compojure "1.6.1"]
                  [incanter "1.9.3"]
                  [tupelo "0.9.201"]
+                 [criterium "0.4.5"]
                  [metosin/muuntaja "0.6.7"]]
   :plugins [[lein-ring "0.12.5"]]
   :ring {:handler covid-server.core/api}
