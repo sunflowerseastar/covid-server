@@ -70,6 +70,14 @@
        (i/$order :Deaths :desc)
        (to-vect)))
 
+(defn us-states-tested [data-us]
+  (let [data-us-without-nil (i/$where {:People_Tested {:ne nil}} data-us)]
+    {:tested-by-state (->> data-us-without-nil
+                         (i/$ [:Province_State :People_Tested])
+                         (i/$order :People_Tested :desc)
+                         (to-vect))
+     :total-tested (reduce + (i/$ :People_Tested data-us-without-nil))}))
+
 (defroutes site-routes
   (GET "/" [] "")
   (GET "/confirmed-by-province" [] (str (confirmed-by-province csse-daily-report)))
@@ -80,6 +88,7 @@
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global csse-time-series-confirmed-global)})
   (GET "/total-confirmed" [] (str (total-confirmed csse-daily-report)))
   (GET "/us-states-deaths-recovered" [] (str (us-states-deaths-recovered csse-daily-report-us)))
+  (GET "/us-states-tested" [] (str (us-states-tested csse-daily-report-us)))
   (GET "/all" [] {:body {:confirmed-by-province (confirmed-by-province csse-daily-report)
                          :confirmed-by-region (confirmed-by-region csse-daily-report)
                          :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
@@ -87,7 +96,8 @@
                          :global-recovered (global-recovered csse-daily-report)
                          :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
                          :total-confirmed (total-confirmed csse-daily-report)
-                         :us-states-deaths-recovered (us-states-deaths-recovered csse-daily-report-us)}})
+                         :us-states-deaths-recovered (us-states-deaths-recovered csse-daily-report-us)
+                         :us-states-tested (us-states-tested csse-daily-report-us)}})
   (route/not-found "Page not found"))
 
 (def api
