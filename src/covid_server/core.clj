@@ -57,7 +57,7 @@
   (let [data-date-columns-only (i/$ [:not :Province/State :Country/Region :Lat :Long] data)
         dates (i/col-names data-date-columns-only)
         column-totals (->> data-date-columns-only
-                           to-matrix
+                           matrix
                            (reduce i/plus))]
     (map vector dates column-totals)))
 
