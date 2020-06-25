@@ -46,6 +46,13 @@
                           to-vect)
    :total-deaths (reduce + (i/$ :Deaths data))})
 
+(defn global-recovered [data]
+  {:recovered-by-region (->> data (i/$where {:Recovered {:ne 0}})
+                             (i/$rollup :sum :Recovered :Country_Region)
+                             (i/$order :Recovered :desc)
+                             to-vect)
+   :total-recovered (reduce + (i/$ :Recovered data))})
+
 (defn time-series-confirmed-global [data]
   (let [data-date-columns-only (i/$ [:not :Province/State :Country/Region :Lat :Long] data)
         dates (i/col-names data-date-columns-only)
@@ -69,6 +76,7 @@
   (GET "/confirmed-by-region" [] (str (confirmed-by-region csse-daily-report)))
   (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county csse-daily-report)))
   (GET "/global-deaths" [] (str (global-deaths csse-daily-report)))
+  (GET "/global-recovered" [] (str (global-recovered csse-daily-report)))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global csse-time-series-confirmed-global)})
   (GET "/total-confirmed" [] (str (total-confirmed csse-daily-report)))
   (GET "/us-state-level-deaths-recovered" [] (str (us-state-level-deaths-recovered csse-daily-report-us)))
@@ -76,6 +84,7 @@
                          :confirmed-by-region (confirmed-by-region csse-daily-report)
                          :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
                          :global-deaths (global-deaths csse-daily-report)
+                         :global-recovered (global-recovered csse-daily-report)
                          :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
                          :total-confirmed (total-confirmed csse-daily-report)
                          :us-state-level-deaths-recovered (us-state-level-deaths-recovered csse-daily-report-us)}})
