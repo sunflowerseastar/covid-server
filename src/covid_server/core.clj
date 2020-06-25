@@ -31,6 +31,15 @@
        (i/$order :Confirmed :desc)
        to-vect))
 
+(defn confirmed-by-us-county [data]
+  (->> data (i/$where {:Admin2 {:ne nil}})
+       (i/$rollup :sum :Confirmed :Admin2)
+       (i/$order :Confirmed :desc)
+       (i/rename-cols {:Confirmed :confirmed-sum})
+       (i/$join [:Admin2 :Admin2] data)
+       (i/$ [:confirmed-sum :Admin2 :Province_State :Country_Region])
+       to-vect))
+
 (defn global-deaths [data]
   {:deaths-by-region (->> data (i/$rollup :sum :Deaths :Country_Region)
                           (i/$order :Deaths :desc)
@@ -58,11 +67,14 @@
   (GET "/" [] "")
   (GET "/confirmed-by-province" [] (str (confirmed-by-province csse-daily-report)))
   (GET "/confirmed-by-region" [] (str (confirmed-by-region csse-daily-report)))
+  (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county csse-daily-report)))
   (GET "/global-deaths" [] (str (global-deaths csse-daily-report)))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global csse-time-series-confirmed-global)})
   (GET "/total-confirmed" [] (str (total-confirmed csse-daily-report)))
   (GET "/us-state-level-deaths-recovered" [] (str (us-state-level-deaths-recovered csse-daily-report-us)))
-  (GET "/all" [] {:body {:confirmed-by-region (confirmed-by-region csse-daily-report)
+  (GET "/all" [] {:body {:confirmed-by-province (confirmed-by-province csse-daily-report)
+                         :confirmed-by-region (confirmed-by-region csse-daily-report)
+                         :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
                          :global-deaths (global-deaths csse-daily-report)
                          :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
                          :total-confirmed (total-confirmed csse-daily-report)
