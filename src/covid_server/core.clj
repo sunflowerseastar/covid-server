@@ -64,7 +64,7 @@
 (defn total-confirmed [data]
   (reduce + (i/$ :Confirmed data)))
 
-(defn us-state-level-deaths-recovered [data-us]
+(defn us-states-deaths-recovered [data-us]
   (->> data-us
        (i/$ [:Province_State :Deaths :Recovered])
        (i/$order :Deaths :desc)
@@ -79,7 +79,7 @@
   (GET "/global-recovered" [] (str (global-recovered csse-daily-report)))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global csse-time-series-confirmed-global)})
   (GET "/total-confirmed" [] (str (total-confirmed csse-daily-report)))
-  (GET "/us-state-level-deaths-recovered" [] (str (us-state-level-deaths-recovered csse-daily-report-us)))
+  (GET "/us-states-deaths-recovered" [] (str (us-states-deaths-recovered csse-daily-report-us)))
   (GET "/all" [] {:body {:confirmed-by-province (confirmed-by-province csse-daily-report)
                          :confirmed-by-region (confirmed-by-region csse-daily-report)
                          :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
@@ -87,7 +87,7 @@
                          :global-recovered (global-recovered csse-daily-report)
                          :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
                          :total-confirmed (total-confirmed csse-daily-report)
-                         :us-state-level-deaths-recovered (us-state-level-deaths-recovered csse-daily-report-us)}})
+                         :us-states-deaths-recovered (us-states-deaths-recovered csse-daily-report-us)}})
   (route/not-found "Page not found"))
 
 (def api
