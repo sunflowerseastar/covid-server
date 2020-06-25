@@ -16,6 +16,16 @@
 (def csse-daily-report-us (read-dataset "states_06-18-2020.csv" :header true))
 (def csse-time-series-confirmed-global (read-dataset "time_series_covid19_confirmed_global.csv" :header true))
 
+(defn confirmed-by-province [data]
+  (->> data (i/$where {:Province_State {:ne nil}})
+       (i/$where {:Province_State {:ne "Recovered"}}) ;; data error (?)
+       (i/$rollup :sum :Confirmed :Province_State)
+       (i/$order :Confirmed :desc)
+       (i/rename-cols {:Confirmed :confirmed-sum})
+       (i/$join [:Province_State :Province_State] data)
+       (i/$ [:confirmed-sum :Province_State :Country_Region])
+       to-vect))
+
 (defn confirmed-by-region [data]
   (->> data (i/$rollup :sum :Confirmed :Country_Region)
        (i/$order :Confirmed :desc)
@@ -46,6 +56,7 @@
 
 (defroutes site-routes
   (GET "/" [] "")
+  (GET "/confirmed-by-province" [] (str (confirmed-by-province csse-daily-report)))
   (GET "/confirmed-by-region" [] (str (confirmed-by-region csse-daily-report)))
   (GET "/global-deaths" [] (str (global-deaths csse-daily-report)))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global csse-time-series-confirmed-global)})
