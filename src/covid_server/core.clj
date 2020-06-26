@@ -26,7 +26,7 @@
        (i/$ [:confirmed-sum :Province_State :Country_Region])
        to-vect))
 
-(defn confirmed-by-region [data]
+(defn confirmed-by-country [data]
   (->> data (i/$rollup :sum :Confirmed :Country_Region)
        (i/$order :Confirmed :desc)
        to-vect))
@@ -41,13 +41,13 @@
        to-vect))
 
 (defn global-deaths [data]
-  {:deaths-by-region (->> data (i/$rollup :sum :Deaths :Country_Region)
+  {:deaths-by-country (->> data (i/$rollup :sum :Deaths :Country_Region)
                           (i/$order :Deaths :desc)
                           to-vect)
    :total-deaths (reduce + (i/$ :Deaths data))})
 
 (defn global-recovered [data]
-  {:recovered-by-region (->> data (i/$where {:Recovered {:ne 0}})
+  {:recovered-by-country (->> data (i/$where {:Recovered {:ne 0}})
                              (i/$rollup :sum :Recovered :Country_Region)
                              (i/$order :Recovered :desc)
                              to-vect)
@@ -88,7 +88,7 @@
 (defroutes site-routes
   (GET "/" [] "")
   (GET "/confirmed-by-province" [] (str (confirmed-by-province csse-daily-report)))
-  (GET "/confirmed-by-region" [] (str (confirmed-by-region csse-daily-report)))
+  (GET "/confirmed-by-country" [] (str (confirmed-by-country csse-daily-report)))
   (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county csse-daily-report)))
   (GET "/global-deaths" [] (str (global-deaths csse-daily-report)))
   (GET "/global-recovered" [] (str (global-recovered csse-daily-report)))
@@ -98,7 +98,7 @@
   (GET "/us-states-hospitalized" [] (str (us-states-hospitalized csse-daily-report-us)))
   (GET "/us-states-tested" [] (str (us-states-tested csse-daily-report-us)))
   (GET "/all" [] {:body {:confirmed-by-province (confirmed-by-province csse-daily-report)
-                         :confirmed-by-region (confirmed-by-region csse-daily-report)
+                         :confirmed-by-country (confirmed-by-country csse-daily-report)
                          :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
                          :global-deaths (global-deaths csse-daily-report)
                          :global-recovered (global-recovered csse-daily-report)
