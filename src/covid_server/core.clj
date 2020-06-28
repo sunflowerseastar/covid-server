@@ -42,15 +42,15 @@
 
 (defn global-deaths [data]
   {:deaths-by-country (->> data (i/$rollup :sum :Deaths :Country_Region)
-                          (i/$order :Deaths :desc)
-                          to-vect)
+                           (i/$order :Deaths :desc)
+                           to-vect)
    :total-deaths (reduce + (i/$ :Deaths data))})
 
 (defn global-recovered [data]
   {:recovered-by-country (->> data (i/$where {:Recovered {:ne 0}})
-                             (i/$rollup :sum :Recovered :Country_Region)
-                             (i/$order :Recovered :desc)
-                             to-vect)
+                              (i/$rollup :sum :Recovered :Country_Region)
+                              (i/$order :Recovered :desc)
+                              to-vect)
    :total-recovered (reduce + (i/$ :Recovered data))})
 
 (defn time-series-confirmed-global [data]
