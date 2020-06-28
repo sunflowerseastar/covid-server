@@ -1,16 +1,16 @@
 (ns covid-server.core
-  (:require [compojure.route :as route]
-            [compojure.handler :as handler])
+  (:require [compojure.handler :as handler]
+            [compojure.route :as route])
   (:use compojure.core
-        ring.adapter.jetty
+        [incanter.core :as i]
+        [incanter.io :refer [read-dataset]]
+        [muuntaja.middleware :as mw]
         [ring.middleware.content-type :only (wrap-content-type)]
         [ring.middleware.file :only (wrap-file)]
         [ring.middleware.file-info :only (wrap-file-info)]
         [ring.middleware.stacktrace :only (wrap-stacktrace)]
         [ring.util.response :only (redirect)]
-        [incanter.core :as i]
-        [incanter.io :refer [read-dataset]]
-        [muuntaja.middleware :as mw]))
+        ring.adapter.jetty))
 
 (def csse-daily-report (read-dataset "06-08-2020.csv" :header true))
 (def csse-daily-report-us (read-dataset "states_06-18-2020.csv" :header true))
