@@ -1,5 +1,6 @@
 (ns covid-server.core
-  (:require [compojure.handler :as handler]
+  (:require [clojure.java.io :as io]
+            [compojure.handler :as handler]
             [compojure.route :as route])
   (:use compojure.core
         [incanter.core :as i]
@@ -11,10 +12,6 @@
         [ring.middleware.stacktrace :only (wrap-stacktrace)]
         [ring.util.response :only (redirect)]
         ring.adapter.jetty))
-
-(def csse-daily-report (read-dataset "06-08-2020.csv" :header true))
-(def csse-daily-report-us (read-dataset "states_06-18-2020.csv" :header true))
-(def csse-time-series-confirmed-global (read-dataset "time_series_covid19_confirmed_global.csv" :header true))
 
 (defn confirmed-by-province [data]
   (->> data (i/$where {:Province_State {:ne nil}})
@@ -85,28 +82,41 @@
                            (to-vect))
      :total-tested (reduce + (i/$ :People_Tested data-us-without-nil))}))
 
+;; "data-directories: csse-daily-report, csse-daily-report-us, csse-time-series-confirmed-global"
+(defn read-csse-daily-report []
+  (read-dataset "resources/data/csse-daily-report.csv" :header true))
+(defn read-csse-daily-report-us []
+  (read-dataset "resources/data/csse-daily-report-us.csv" :header true))
+(defn read-csse-time-series-confirmed-global []
+  (read-dataset "resources/data/csse-time-series-confirmed-global.csv" :header true))
+
 (defroutes site-routes
   (GET "/" [] "")
-  (GET "/confirmed-by-province" [] (str (confirmed-by-province csse-daily-report)))
-  (GET "/confirmed-by-country" [] (str (confirmed-by-country csse-daily-report)))
-  (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county csse-daily-report)))
-  (GET "/global-deaths" [] (str (global-deaths csse-daily-report)))
-  (GET "/global-recovered" [] (str (global-recovered csse-daily-report)))
-  (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global csse-time-series-confirmed-global)})
-  (GET "/total-confirmed" [] (str (total-confirmed csse-daily-report)))
-  (GET "/us-states-deaths-recovered" [] (str (us-states-deaths-recovered csse-daily-report-us)))
-  (GET "/us-states-hospitalized" [] (str (us-states-hospitalized csse-daily-report-us)))
-  (GET "/us-states-tested" [] (str (us-states-tested csse-daily-report-us)))
-  (GET "/all" [] {:body {:confirmed-by-province (confirmed-by-province csse-daily-report)
-                         :confirmed-by-country (confirmed-by-country csse-daily-report)
-                         :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
-                         :global-deaths (global-deaths csse-daily-report)
-                         :global-recovered (global-recovered csse-daily-report)
-                         :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
-                         :total-confirmed (total-confirmed csse-daily-report)
-                         :us-states-deaths-recovered (us-states-deaths-recovered csse-daily-report-us)
-                         :us-states-hospitalized (us-states-hospitalized csse-daily-report-us)
-                         :us-states-tested (us-states-tested csse-daily-report-us)}})
+  (GET "/confirmed-by-province" [] (str (confirmed-by-province (read-csse-daily-report))))
+  (GET "/confirmed-by-country" [] (str (confirmed-by-country (read-csse-daily-report))))
+  (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county (read-csse-daily-report))))
+  (GET "/global-deaths" [] (str (global-deaths (read-csse-daily-report))))
+  (GET "/global-recovered" [] (str (global-recovered (read-csse-daily-report))))
+  (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global (read-csse-time-series-confirmed-global))})
+  (GET "/total-confirmed" [] (-> (read-csse-daily-report)
+                                 total-confirmed
+                                 str))
+  (GET "/us-states-deaths-recovered" [] (str (us-states-deaths-recovered (read-csse-daily-report-us))))
+  (GET "/us-states-hospitalized" [] (str (us-states-hospitalized (read-csse-daily-report-us))))
+  (GET "/us-states-tested" [] (str (us-states-tested (read-csse-daily-report-us))))
+  (GET "/all" [] (let [csse-daily-report (read-csse-daily-report)
+                       csse-daily-report-us (read-csse-daily-report-us)
+                       csse-time-series-confirmed-global (read-csse-time-series-confirmed-global)]
+                   {:body {:confirmed-by-province (confirmed-by-province csse-daily-report)
+                           :confirmed-by-country (confirmed-by-country csse-daily-report)
+                           :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
+                           :global-deaths (global-deaths csse-daily-report)
+                           :global-recovered (global-recovered csse-daily-report)
+                           :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
+                           :total-confirmed (total-confirmed csse-daily-report)
+                           :us-states-deaths-recovered (us-states-deaths-recovered csse-daily-report-us)
+                           :us-states-hospitalized (us-states-hospitalized csse-daily-report-us)
+                           :us-states-tested (us-states-tested csse-daily-report-us)}}))
   (route/not-found "Page not found"))
 
 (def api
