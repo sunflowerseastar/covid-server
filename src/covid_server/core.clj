@@ -98,9 +98,7 @@
   (GET "/global-deaths" [] (str (global-deaths (read-csse-daily-report))))
   (GET "/global-recovered" [] (str (global-recovered (read-csse-daily-report))))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global (read-csse-time-series-confirmed-global))})
-  (GET "/total-confirmed" [] (-> (read-csse-daily-report)
-                                 total-confirmed
-                                 str))
+  (GET "/total-confirmed" [] (-> (read-csse-daily-report) total-confirmed str))
   (GET "/us-states-deaths-recovered" [] (str (us-states-deaths-recovered (read-csse-daily-report-us))))
   (GET "/us-states-hospitalized" [] (str (us-states-hospitalized (read-csse-daily-report-us))))
   (GET "/us-states-tested" [] (str (us-states-tested (read-csse-daily-report-us))))
