@@ -37,6 +37,18 @@
        (i/$ [:confirmed-sum :Admin2 :Province_State :Country_Region])
        to-vect))
 
+(defn confirmed-by-us-county-fips [data]
+  (letfn [(left-pad-zeros-fips [d] (i/transform-col d :FIPS #(format "%05d" %)))]
+    (->> data (i/$where {:Admin2 {:ne nil}})
+         (i/$rollup :sum :Confirmed :Admin2)
+         (i/$order :Confirmed :desc)
+         (i/rename-cols {:Confirmed :confirmed-sum})
+         (i/$join [:Admin2 :Admin2] data)
+         (i/$ [:FIPS :confirmed-sum])
+         left-pad-zeros-fips
+         to-vect
+         (reduce #(assoc %1 (first %2) (second %2)) {}))))
+
 (defn global-deaths [data]
   {:deaths-by-country (->> data (i/$rollup :sum :Deaths :Country_Region)
                            (i/$order :Deaths :desc)
@@ -95,6 +107,7 @@
   (GET "/confirmed-by-province" [] (str (confirmed-by-province (read-csse-daily-report))))
   (GET "/confirmed-by-country" [] (str (confirmed-by-country (read-csse-daily-report))))
   (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county (read-csse-daily-report))))
+  (GET "/confirmed-by-us-county-fips" [] (str (confirmed-by-us-county-fips (read-csse-daily-report))))
   (GET "/global-deaths" [] (str (global-deaths (read-csse-daily-report))))
   (GET "/global-recovered" [] (str (global-recovered (read-csse-daily-report))))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global (read-csse-time-series-confirmed-global))})
@@ -108,6 +121,7 @@
                    {:body {:confirmed-by-province (confirmed-by-province csse-daily-report)
                            :confirmed-by-country (confirmed-by-country csse-daily-report)
                            :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
+                           :confirmed-by-us-county-fips (confirmed-by-us-county-fips csse-daily-report)
                            :global-deaths (global-deaths csse-daily-report)
                            :global-recovered (global-recovered csse-daily-report)
                            :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
