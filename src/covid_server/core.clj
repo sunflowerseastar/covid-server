@@ -102,6 +102,21 @@
 (defn read-csse-time-series-confirmed-global []
   (read-dataset "resources/data/csse-time-series-confirmed-global.csv" :header true))
 
+(defn dir->newest-file [dir]
+  (->> (io/file dir)
+       .listFiles
+       (filter #(not (.isDirectory %)))
+       (filter #(not= (.getName %) ".DS_Store"))
+       (sort-by #(.lastModified %))
+       (reverse)
+       first))
+
+(defn last-updated []
+  (-> (dir->newest-file "resources/data")
+      .lastModified
+      java.util.Date.
+      .toInstant))
+
 (defroutes site-routes
   (GET "/" [] "")
   (GET "/confirmed-by-province" [] (str (confirmed-by-province (read-csse-daily-report))))
@@ -110,6 +125,7 @@
   (GET "/confirmed-by-us-county-fips" [] (str (confirmed-by-us-county-fips (read-csse-daily-report))))
   (GET "/global-deaths" [] (str (global-deaths (read-csse-daily-report))))
   (GET "/global-recovered" [] (str (global-recovered (read-csse-daily-report))))
+  (GET "/last-updated" [] (str (last-updated)))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global (read-csse-time-series-confirmed-global))})
   (GET "/total-confirmed" [] (-> (read-csse-daily-report) total-confirmed str))
   (GET "/us-states-deaths-recovered" [] (str (us-states-deaths-recovered (read-csse-daily-report-us))))
@@ -124,6 +140,7 @@
                            :confirmed-by-us-county-fips (confirmed-by-us-county-fips csse-daily-report)
                            :global-deaths (global-deaths csse-daily-report)
                            :global-recovered (global-recovered csse-daily-report)
+                           :last-updated (last-updated)
                            :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
                            :total-confirmed (total-confirmed csse-daily-report)
                            :us-states-deaths-recovered (us-states-deaths-recovered csse-daily-report-us)
