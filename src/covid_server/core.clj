@@ -52,12 +52,11 @@
          (i/$order :Incidence_Rate :desc))))
 
 (defn confirmed-by-us-county [data]
-  (->> data (i/$where {:Admin2 {:ne nil}})
-       (i/$rollup :sum :Confirmed :Admin2)
+  (->> data (i/rename-cols {:Admin2 :County_Name})
+       (i/$where {:FIPS {:ne nil}})
+       (i/$where {:County_Name {:ne "Unassigned"}})
+       (i/$ [:Confirmed :County_Name :Province_State :Country_Region :FIPS])
        (i/$order :Confirmed :desc)
-       (i/rename-cols {:Confirmed :confirmed-sum})
-       (i/$join [:Admin2 :Admin2] data)
-       (i/$ [:confirmed-sum :Admin2 :Province_State :Country_Region])
        to-vect))
 
 (defn confirmed-by-us-county-fips [data]
