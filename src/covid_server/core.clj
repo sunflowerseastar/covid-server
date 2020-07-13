@@ -86,7 +86,8 @@
    :total-recovered (reduce + (i/$ :Recovered data))})
 
 (defn time-series-confirmed-global [data]
-  (let [data-date-columns-only (i/$ [:not :Province/State :Country/Region :Lat :Long] data)
+  (let [;; note that the time series headers are "Province/State" instead of "Province_State" - not a typo
+        data-date-columns-only (i/$ [:not :Province/State :Country/Region :Lat :Long] data)
         dates (i/col-names data-date-columns-only)
         column-totals (->> data-date-columns-only
                            matrix
