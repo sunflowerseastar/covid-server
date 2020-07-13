@@ -65,12 +65,10 @@
 (defn confirmed-by-us-county-fips [data]
   (letfn [(left-pad-zeros-fips [d] (i/transform-col d :FIPS #(format "%05d" %)))]
     (->> data (i/$where {:Admin2 {:ne nil}})
-         (i/$rollup :sum :Confirmed :Admin2)
          (i/$order :Confirmed :desc)
-         (i/rename-cols {:Confirmed :confirmed-sum})
-         (i/$join [:Admin2 :Admin2] data)
-         (i/$ [:FIPS :confirmed-sum])
+         (i/$ [:FIPS :Confirmed])
          left-pad-zeros-fips
+         ;; TODO refactor to-vect -> to-map
          to-vect
          (reduce #(assoc %1 (first %2) (second %2)) {}))))
 
