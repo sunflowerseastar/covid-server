@@ -18,18 +18,29 @@
 
 (def populations (read-dataset "resources/data/country-populations.csv" :header true))
 
-(defn confirmed-by-state [data]
-  (->> data (i/$where {:Province_State {:ne nil}})
-       (i/$where {:Province_State {:ne "Recovered"}}) ;; data error (?)
-       (i/$rollup :sum :Confirmed :Province_State)
-       (i/$order :Confirmed :desc)
-       (i/rename-cols {:Confirmed :confirmed-sum})
-       (i/$join [:Province_State :Province_State] data)
-       (i/$ [:confirmed-sum :Province_State :Country_Region])
-       to-vect))
+;; "data-directories: csse-daily-report, csse-daily-report-us, csse-time-series-confirmed-global"
+(defn read-csse-daily-report []
+  (read-dataset "resources/data/csse-daily-report.csv" :header true))
+(defn read-csse-daily-report-us []
+  (read-dataset "resources/data/csse-daily-report-us.csv" :header true))
+(defn read-csse-time-series-confirmed-global []
+  (read-dataset "resources/data/csse-time-series-confirmed-global.csv" :header true))
 
-(defn confirmed-by-country [data]
-  (->> data (i/$rollup :sum :Confirmed :Country_Region)
+(defn confirmed-by-state []
+  (let [csse-daily-report (read-csse-daily-report)]
+    (->> csse-daily-report
+         (i/$where {:Province_State {:ne nil}})
+         (i/$where {:Province_State {:ne "Recovered"}}) ;; data error (?)
+         (i/$rollup :sum :Confirmed :Province_State)
+         (i/$order :Confirmed :desc)
+         (i/rename-cols {:Confirmed :confirmed-sum})
+         (i/$join [:Province_State :Province_State] csse-daily-report)
+         (i/$ [:confirmed-sum :Province_State :Country_Region])
+         to-vect)))
+
+(defn confirmed-by-country []
+  (->> (read-csse-daily-report)
+       (i/$rollup :sum :Confirmed :Country_Region)
        (i/$order :Confirmed :desc)
        to-vect))
 
@@ -54,17 +65,19 @@
     (->> (i/conj-rows single-entry-countries multi-entry-countries)
          (i/$order :Incidence_Rate :desc))))
 
-(defn confirmed-by-us-county [data]
-  (->> data (i/rename-cols {:Admin2 :County_Name})
+(defn confirmed-by-us-county []
+  (->> (read-csse-daily-report)
+       (i/rename-cols {:Admin2 :County_Name})
        (i/$where {:FIPS {:ne nil}})
        (i/$where {:County_Name {:ne "Unassigned"}})
        (i/$ [:Confirmed :County_Name :Province_State :Country_Region :FIPS])
        (i/$order :Confirmed :desc)
        to-vect))
 
-(defn confirmed-by-us-county-fips [data]
+(defn confirmed-by-us-county-fips []
   (letfn [(left-pad-zeros-fips [d] (i/transform-col d :FIPS #(format "%05d" %)))]
-    (->> data (i/$where {:Admin2 {:ne nil}})
+    (->> (read-csse-daily-report)
+         (i/$where {:Admin2 {:ne nil}})
          (i/$order :Confirmed :desc)
          (i/$ [:FIPS :Confirmed])
          left-pad-zeros-fips
@@ -72,18 +85,21 @@
          to-vect
          (reduce #(assoc %1 (first %2) (second %2)) {}))))
 
-(defn global-deaths [data]
-  {:deaths-by-country (->> data (i/$rollup :sum :Deaths :Country_Region)
-                           (i/$order :Deaths :desc)
-                           to-vect)
-   :total-deaths (reduce + (i/$ :Deaths data))})
+(defn global-deaths []
+  (let [csse-daily-report (read-csse-daily-report)]
+   {:deaths-by-country (->> csse-daily-report
+                            (i/$rollup :sum :Deaths :Country_Region)
+                            (i/$order :Deaths :desc)
+                            to-vect)
+    :total-deaths (reduce + (i/$ :Deaths csse-daily-report))}))
 
-(defn global-recovered [data]
-  {:recovered-by-country (->> data (i/$where {:Recovered {:ne 0}})
-                              (i/$rollup :sum :Recovered :Country_Region)
-                              (i/$order :Recovered :desc)
-                              to-vect)
-   :total-recovered (reduce + (i/$ :Recovered data))})
+(defn global-recovered []
+  (let [csse-daily-report (read-csse-daily-report)]
+    {:recovered-by-country (->> csse-daily-report (i/$where {:Recovered {:ne 0}})
+                                (i/$rollup :sum :Recovered :Country_Region)
+                                (i/$order :Recovered :desc)
+                                to-vect)
+     :total-recovered (reduce + (i/$ :Recovered csse-daily-report))}))
 
 (defn time-series-confirmed-global [data]
   (let [;; note that the time series headers are "Province/State" instead of "Province_State" - not a typo
@@ -94,8 +110,8 @@
                            (reduce i/plus))]
     (map vector dates column-totals)))
 
-(defn total-confirmed [data]
-  (reduce + (i/$ :Confirmed data)))
+(defn total-confirmed []
+  (reduce + (i/$ :Confirmed (read-csse-daily-report))))
 
 (defn us-states-deaths-recovered [data-us]
   (->> data-us
@@ -118,14 +134,6 @@
                            (to-vect))
      :total-tested (reduce + (i/$ :People_Tested data-us-without-nil))}))
 
-;; "data-directories: csse-daily-report, csse-daily-report-us, csse-time-series-confirmed-global"
-(defn read-csse-daily-report []
-  (read-dataset "resources/data/csse-daily-report.csv" :header true))
-(defn read-csse-daily-report-us []
-  (read-dataset "resources/data/csse-daily-report-us.csv" :header true))
-(defn read-csse-time-series-confirmed-global []
-  (read-dataset "resources/data/csse-time-series-confirmed-global.csv" :header true))
-
 (defn dir->newest-file [dir]
   (->> (io/file dir)
        .listFiles
@@ -143,30 +151,29 @@
 
 (defroutes site-routes
   (GET "/" [] "")
-  (GET "/confirmed-by-state" [] (str (confirmed-by-state (read-csse-daily-report))))
-  (GET "/confirmed-by-country" [] (str (confirmed-by-country (read-csse-daily-report))))
-  (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county (read-csse-daily-report))))
-  (GET "/confirmed-by-us-county-fips" [] (str (confirmed-by-us-county-fips (read-csse-daily-report))))
-  (GET "/global-deaths" [] (str (global-deaths (read-csse-daily-report))))
-  (GET "/global-recovered" [] (str (global-recovered (read-csse-daily-report))))
+  (GET "/confirmed-by-state" [] (str (confirmed-by-state)))
+  (GET "/confirmed-by-country" [] (str (confirmed-by-country)))
+  (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county)))
+  (GET "/confirmed-by-us-county-fips" [] (str (confirmed-by-us-county-fips)))
+  (GET "/global-deaths" [] (str (global-deaths)))
+  (GET "/global-recovered" [] (str (global-recovered)))
   (GET "/last-updated" [] (str (last-updated)))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global (read-csse-time-series-confirmed-global))})
-  (GET "/total-confirmed" [] (-> (read-csse-daily-report) total-confirmed str))
+  (GET "/total-confirmed" [] (str total-confirmed))
   (GET "/us-states-deaths-recovered" [] (str (us-states-deaths-recovered (read-csse-daily-report-us))))
   (GET "/us-states-hospitalized" [] (str (us-states-hospitalized (read-csse-daily-report-us))))
   (GET "/us-states-tested" [] (str (us-states-tested (read-csse-daily-report-us))))
-  (GET "/all" [] (let [csse-daily-report (read-csse-daily-report)
-                       csse-daily-report-us (read-csse-daily-report-us)
+  (GET "/all" [] (let [csse-daily-report-us (read-csse-daily-report-us)
                        csse-time-series-confirmed-global (read-csse-time-series-confirmed-global)]
-                   {:body {:confirmed-by-state (confirmed-by-state csse-daily-report)
-                           :confirmed-by-country (confirmed-by-country csse-daily-report)
-                           :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
-                           :confirmed-by-us-county-fips (confirmed-by-us-county-fips csse-daily-report)
-                           :global-deaths (global-deaths csse-daily-report)
-                           :global-recovered (global-recovered csse-daily-report)
+                   {:body {:confirmed-by-state (confirmed-by-state)
+                           :confirmed-by-country (confirmed-by-country)
+                           :confirmed-by-us-county (confirmed-by-us-county)
+                           :confirmed-by-us-county-fips (confirmed-by-us-county-fips)
+                           :global-deaths (global-deaths)
+                           :global-recovered (global-recovered)
                            :last-updated (last-updated)
                            :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
-                           :total-confirmed (total-confirmed csse-daily-report)
+                           :total-confirmed (total-confirmed)
                            :us-states-deaths-recovered (us-states-deaths-recovered csse-daily-report-us)
                            :us-states-hospitalized (us-states-hospitalized csse-daily-report-us)
                            :us-states-tested (us-states-tested csse-daily-report-us)}}))
