@@ -13,6 +13,8 @@
         [ring.util.response :only (redirect)]
         ring.adapter.jetty))
 
+(def populations (read-dataset "resources/data/country-populations.csv" :header true))
+
 (defn confirmed-by-province [data]
   (->> data (i/$where {:Province_State {:ne nil}})
        (i/$where {:Province_State {:ne "Recovered"}}) ;; data error (?)
@@ -27,6 +29,27 @@
   (->> data (i/$rollup :sum :Confirmed :Country_Region)
        (i/$order :Confirmed :desc)
        to-vect))
+
+;; per 100,000
+(defn incidence-by-country [data]
+  (let [clean-data (i/$where {:Incidence_Rate {:ne nil}} data)
+        confirmeds (i/$rollup :sum :Confirmed :Country_Region data)
+        ;; countries with only one entry can use their incidence_rate directly
+        single-entry-countries (->> clean-data (i/$where {:Province_State {:eq nil}})
+                                    ;; make datasets' cols match
+                                    (i/$ [:Country_Region :Incidence_Rate :Confirmed]))
+        ;; "multi-entry" countries are divided by region, so need to be rolled up and then calculated
+        multi-entry-countries (->> clean-data (i/$rollup :count :Province_State :Country_Region)
+                                   (i/$where {:Province_State {:ne 1}})
+                                   (i/$join [:Country_Region :Country_Region] confirmeds)
+                                   (i/$join [:Country_Region :Country_Region] populations)
+                                   ;; calculate incidence rate, per 100,000
+                                   (add-derived-column :Incidence_Rate [:Confirmed :Population]
+                                                       (fn [c p] (->> (/ c p) float (* 100000))))
+                                   ;; make datasets' cols match
+                                   (i/$ [:Country_Region :Incidence_Rate :Confirmed]))]
+    (->> (i/conj-rows single-entry-countries multi-entry-countries)
+         (i/$order :Incidence_Rate :desc))))
 
 (defn confirmed-by-us-county [data]
   (->> data (i/$where {:Admin2 {:ne nil}})
