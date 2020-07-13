@@ -18,7 +18,7 @@
 
 (def populations (read-dataset "resources/data/country-populations.csv" :header true))
 
-(defn confirmed-by-province [data]
+(defn confirmed-by-state [data]
   (->> data (i/$where {:Province_State {:ne nil}})
        (i/$where {:Province_State {:ne "Recovered"}}) ;; data error (?)
        (i/$rollup :sum :Confirmed :Province_State)
@@ -142,7 +142,7 @@
 
 (defroutes site-routes
   (GET "/" [] "")
-  (GET "/confirmed-by-province" [] (str (confirmed-by-province (read-csse-daily-report))))
+  (GET "/confirmed-by-state" [] (str (confirmed-by-state (read-csse-daily-report))))
   (GET "/confirmed-by-country" [] (str (confirmed-by-country (read-csse-daily-report))))
   (GET "/confirmed-by-us-county" [] (str (confirmed-by-us-county (read-csse-daily-report))))
   (GET "/confirmed-by-us-county-fips" [] (str (confirmed-by-us-county-fips (read-csse-daily-report))))
@@ -157,7 +157,7 @@
   (GET "/all" [] (let [csse-daily-report (read-csse-daily-report)
                        csse-daily-report-us (read-csse-daily-report-us)
                        csse-time-series-confirmed-global (read-csse-time-series-confirmed-global)]
-                   {:body {:confirmed-by-province (confirmed-by-province csse-daily-report)
+                   {:body {:confirmed-by-state (confirmed-by-state csse-daily-report)
                            :confirmed-by-country (confirmed-by-country csse-daily-report)
                            :confirmed-by-us-county (confirmed-by-us-county csse-daily-report)
                            :confirmed-by-us-county-fips (confirmed-by-us-county-fips csse-daily-report)
