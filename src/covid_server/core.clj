@@ -1,5 +1,6 @@
 (ns covid-server.core
-  (:require [clojure.java.io :as io]
+  (:require [clojure.core.memoize :as memo]
+            [clojure.java.io :as io]
             [compojure.handler :as handler]
             [compojure.route :as route])
   (:use compojure.core
@@ -110,8 +111,10 @@
                            (reduce i/plus))]
     (map vector dates column-totals)))
 
-(defn total-confirmed []
+(defn total-confirmed [_]
   (reduce + (i/$ :Confirmed (read-csse-daily-report))))
+
+(def m-total-confirmed (memo/lu #(total-confirmed %) :lu/threshold 3))
 
 (defn us-states-deaths-recovered [data-us]
   (->> data-us
@@ -143,6 +146,15 @@
        (reverse)
        first))
 
+(defn timestamp-daily []
+  (.lastModified (io/file "resources/data/csse-daily-report.csv")))
+
+(defn timestamp-daily-us []
+  (.lastModified (io/file "resources/data/csse-daily-report-us.csv")))
+
+(defn timestamp-time-series []
+  (.lastModified (io/file "resources/data/csse-time-series-confirmed-global.csv")))
+
 (defn last-updated []
   (-> (dir->newest-file "resources/data")
       .lastModified
@@ -159,12 +171,15 @@
   (GET "/global-recovered" [] (str (global-recovered)))
   (GET "/last-updated" [] (str (last-updated)))
   (GET "/time-series-confirmed-global" [] {:body (time-series-confirmed-global (read-csse-time-series-confirmed-global))})
-  (GET "/total-confirmed" [] (str total-confirmed))
+  (GET "/total-confirmed" [] (str (m-total-confirmed (timestamp-daily))))
   (GET "/us-states-deaths-recovered" [] (str (us-states-deaths-recovered (read-csse-daily-report-us))))
   (GET "/us-states-hospitalized" [] (str (us-states-hospitalized (read-csse-daily-report-us))))
   (GET "/us-states-tested" [] (str (us-states-tested (read-csse-daily-report-us))))
   (GET "/all" [] (let [csse-daily-report-us (read-csse-daily-report-us)
-                       csse-time-series-confirmed-global (read-csse-time-series-confirmed-global)]
+                       csse-time-series-confirmed-global (read-csse-time-series-confirmed-global)
+                       get-timestamp-daily (timestamp-daily)
+                       get-timestamp-daily-us (timestamp-daily-us)
+                       get-timestamp-time-series (timestamp-time-series)]
                    {:body {:confirmed-by-state (confirmed-by-state)
                            :confirmed-by-country (confirmed-by-country)
                            :confirmed-by-us-county (confirmed-by-us-county)
@@ -173,7 +188,7 @@
                            :global-recovered (global-recovered)
                            :last-updated (last-updated)
                            :time-series-confirmed-global (time-series-confirmed-global csse-time-series-confirmed-global)
-                           :total-confirmed (total-confirmed)
+                           :total-confirmed (m-total-confirmed timestamp-daily)
                            :us-states-deaths-recovered (us-states-deaths-recovered csse-daily-report-us)
                            :us-states-hospitalized (us-states-hospitalized csse-daily-report-us)
                            :us-states-tested (us-states-tested csse-daily-report-us)}}))
