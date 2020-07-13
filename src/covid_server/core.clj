@@ -13,6 +13,9 @@
         [ring.util.response :only (redirect)]
         ring.adapter.jetty))
 
+;; quick look
+(defn ql ([d] (ql d 3)) ([d n] ($ (range n) :all d)))
+
 (def populations (read-dataset "resources/data/country-populations.csv" :header true))
 
 (defn confirmed-by-province [data]
