@@ -193,8 +193,8 @@
   (GET "/time-series-confirmed-global" [] {:body (m-time-series-confirmed-global (get-timestamp-time-series))})
   (GET "/total-confirmed" [] (str (m-total-confirmed (get-timestamp-daily))))
   (GET "/us-states-deaths-recovered" [] (str (m-us-states-deaths-recovered (get-timestamp-daily-us))))
-  (GET "/us-states-hospitalized" [] (str (m-us-states-hospitalized (get-timestamp-daily-us))))
-  (GET "/us-states-tested" [] (str (m-us-states-tested (get-timestamp-daily-us))))
+  ;; (GET "/us-states-hospitalized" [] (str (m-us-states-hospitalized (get-timestamp-daily-us))))
+  ;; (GET "/us-states-tested" [] (str (m-us-states-tested (get-timestamp-daily-us))))
   (GET "/all" [] (let [timestamp-daily (get-timestamp-daily)
                        timestamp-daily-us (get-timestamp-daily-us)
                        timestamp-time-series (get-timestamp-time-series)]
@@ -208,8 +208,9 @@
                            :time-series-confirmed-global (m-time-series-confirmed-global timestamp-time-series)
                            :total-confirmed (m-total-confirmed timestamp-daily)
                            :us-states-deaths-recovered (m-us-states-deaths-recovered timestamp-daily-us)
-                           :us-states-hospitalized (m-us-states-hospitalized timestamp-daily-us)
-                           :us-states-tested (m-us-states-tested timestamp-daily-us)}}))
+                           ;; :us-states-hospitalized (m-us-states-hospitalized timestamp-daily-us)
+                           ;; :us-states-tested (m-us-states-tested timestamp-daily-us)
+                           }}))
   (route/not-found "Page not found"))
 
 (def api
