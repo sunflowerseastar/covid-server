@@ -1,0 +1,11 @@
+* covid-server
+
+[[https://github.com/ring-clojure/ring][Ring]] API routes & processing for data from [[https://github.com/CSSEGISandData/COVID-19][CSSEGISandData]] to [[https://github.com/sunflowerseastar/covid-dashboard][covid-dashboard]].
+
+#+begin_src sh
+# run locally
+lein ring server # curl localhost:3000/:endpoint
+
+# build
+lein ring uberjar
+#+end_src
